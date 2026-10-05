@@ -1,0 +1,726 @@
+---
+title: "ReproRehab Pod: Working With Data in R"
+subtitle: "Week 4 — A Short Refresher and an Introduction to Data Manipulation"
+author: "Madeline Ratoza"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 2
+    number-sections: false
+    code-copy: true
+    code-overflow: wrap
+    embed-resources: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Today: From Looking at Data to Working With Data
+
+In Week 2, we imported a dataset and performed simple calculations. In Week 3, we explored variable types, loops, and conditionals.
+
+Today, we will use those ideas to answer questions about a new fictional rehab dataset. Most of our time will focus on **data manipulation**: choosing the rows and columns we need, creating new variables, and making small summaries.
+
+You do not need to memorize every function. The goal is to recognize what each tool does and practice adapting an example.
+
+### Learning goals
+
+By the end of this session, you should be able to:
+
+- Explain what a conditional and a loop do.
+- Select columns and filter rows in a dataset.
+- Sort observations and create a new variable.
+- Calculate a summary for the whole dataset or for each group.
+- Save your work as a new object while keeping the original data available.
+
+### How to use this tutorial
+
+Read each example, run it in RStudio, and look at the result. Then try the **Your turn** task. Each task includes an expandable hint and answer. Try the hint first; opening an answer is also a useful way to learn.
+
+**Suggested pace:** 5–10 minutes for setup and review, 35–40 minutes for the core activities, and 10–15 minutes for the mini analysis. The missing-data activity is optional.
+
+::: {.callout-note}
+## Where do I type?
+
+Create a new R script or Quarto document in your RStudio project. Copy the setup code below, then add your practice code as you work. In a script, run a line or selection with **Command + Enter** on Mac or **Ctrl + Enter** on Windows. In a Quarto document, put R code inside R code chunks.
+
+The webpage shows examples and results. Your own RStudio session is where you run and change the code.
+:::
+
+## 1. Meet Our New Fake Dataset
+
+Imagine a small outpatient rehabilitation program wants to describe its participants and their outcomes.
+
+Each row represents **one fictional participant**, with baseline and follow-up recorded in the same row. These are synthetic teaching data, not real patient records.
+
+| Variable | What it represents |
+|---|---|
+| `participant_id` | A unique fictional ID |
+| `age` | Age in years |
+| `clinic` | North or South clinic |
+| `visits` | Number of visits attended |
+| `baseline_score` | Function score at the beginning |
+| `followup_score` | Function score at follow-up |
+| `completed` | Whether the participant completed the program |
+
+For this exercise, function scores range from 0 to 100, and **higher scores indicate better function**. A positive change therefore represents improvement. These scores and any thresholds we use are invented for practice.
+
+### Create the practice data
+
+Run this entire block once. It creates the same 12 participants for everyone. You do not need to type every value or understand `data.frame()` yet; this is our setup step.
+
+```{r}
+clinic_data <- data.frame(
+  participant_id = c("P001", "P002", "P003", "P004", "P005", "P006",
+                     "P007", "P008", "P009", "P010", "P011", "P012"),
+  age = c(34, 67, 52, 45, 71, 29, 63, 48, 76, 39, 58, 65),
+  clinic = c("North", "North", "North", "North", "North", "North",
+             "South", "South", "South", "South", "South", "South"),
+  visits = c(8, 6, 4, 10, 5, 3, 7, 9, 4, 6, 8, 5),
+  baseline_score = c(40, 35, 55, 48, 30, 62, 38, 50, 28, 60, 44, 32),
+  followup_score = c(55, 43, 58, 66, 40, 61, 50, 65, 30, 69, 57, 38),
+  completed = c("Yes", "Yes", "No", "Yes", "Yes", "No",
+                "Yes", "Yes", "No", "Yes", "Yes", "Yes")
+)
+```
+
+Look in your Environment. You should see `clinic_data`.
+
+```{r}
+head(clinic_data)
+names(clinic_data)
+dim(clinic_data)
+str(clinic_data)
+```
+
+**Pause:** How many participants are there? Which columns contain numbers? Which contain text?
+
+### Your turn: Inspect one variable
+
+Check the variable type of `clinic`.
+
+```{r}
+# Write your code here.
+```
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Hint
+
+Week 3 used `str()` to inspect types. Use `$` to access one column inside `clinic_data`.
+:::
+
+::: {.callout-note collapse="true"}
+## Show the answer
+
+```{r}
+str(clinic_data$clinic)
+```
+
+You should see `chr`, meaning character/text. A variable can represent categories even when R stores its values as text. Today's tools work with these text labels without converting them to factors.
+:::
+
+## 2. Quick Refresher: Conditionals and Loops
+
+A **conditional** checks a condition. A **loop** repeats an action.
+
+### A conditional checks one value
+
+Let's check whether the first participant attended at least six visits.
+
+```{r}
+first_visits <- clinic_data$visits[1]
+
+if (first_visits >= 6) {
+  print("Visit target met")
+} else {
+  print("Visit target not met")
+}
+```
+
+`[1]` asks for the first value. `>=` means greater than or equal to. Keep `} else {` together as shown when running the full block.
+
+### A loop repeats an action
+
+```{r}
+for (id in clinic_data$participant_id[1:3]) {
+  print(id)
+}
+```
+
+This repeats `print()` for the first three participant IDs. `id` is the name holding the current ID during each pass through the loop.
+
+### Your turn: Apply a condition to every participant
+
+Use `ifelse()` to label each participant as `"Target met"` when they attended **at least six visits**, and `"Below target"` otherwise. Save the result in a new column called `visit_status`.
+
+```{r}
+# clinic_data$visit_status <- ifelse(...)
+```
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Hint
+
+Use this pattern:
+
+```r
+ifelse(condition, "label when TRUE", "label when FALSE")
+```
+
+Your condition is `clinic_data$visits >= 6`. Remove the `#` before running a completed line.
+:::
+
+::: {.callout-note collapse="true"}
+## Show the answer
+
+```{r}
+clinic_data$visit_status <- ifelse(
+  clinic_data$visits >= 6,
+  "Target met",
+  "Below target"
+)
+
+clinic_data$visit_status
+```
+
+This applies the condition across the whole column. Unlike `if`, which expects one TRUE/FALSE value, `ifelse()` can work with many values at once. Both labels describe our practice rule, not a clinical standard.
+:::
+
+::: {.callout-note}
+## Why aren't we writing more loops?
+
+Loops are useful when we need to repeat a task. Many R functions already operate on whole columns, so we can use them directly for today's calculations and data manipulation.
+:::
+
+## 3. Load Our Data Manipulation Tools
+
+We will use **dplyr**, a package for working with tables. It is also part of the tidyverse introduced in Week 2.
+
+If you have not installed it, run this line **once in the Console**:
+
+```{r}
+#| eval: false
+install.packages("dplyr")
+```
+
+Load the package whenever you start a new R session:
+
+```{r}
+library(dplyr)
+```
+
+Remember: installing puts a package on your computer; `library()` makes it available in the current session.
+
+### Five tools for today
+
+| Function | What it does | Question it helps answer |
+|---|---|---|
+| `select()` | Keeps columns | Which variables do I need? |
+| `filter()` | Keeps rows matching a condition | Which participants do I need? |
+| `arrange()` | Sorts rows | In what order do I want to see them? |
+| `mutate()` | Adds or changes columns | What new variable do I need? |
+| `summarise()` | Calculates summary values | What does this dataset tell me? |
+
+For now, we will put the dataset first inside each function. Later, we will connect a few steps with a pipe.
+
+## 4. Select: Choose Columns
+
+We want a small table with participant IDs, clinics, and visits.
+
+```{r}
+visit_table <- select(clinic_data, participant_id, clinic, visits)
+visit_table
+```
+
+Read this as: take `clinic_data`, keep these three columns, and save the result as `visit_table`.
+
+**Check:** We kept all 12 participants, but fewer columns. `select()` chooses **columns**, not participants.
+
+### Your turn: Make a score table
+
+Create `score_table` containing `participant_id`, `baseline_score`, and `followup_score`. Print it.
+
+```{r}
+# Write your code here.
+```
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Hint
+
+Start with `score_table <- select(clinic_data, ...)`. Replace `...` with the three column names, separated by commas. Column names inside `select()` do not need quotation marks here.
+:::
+
+::: {.callout-note collapse="true"}
+## Show the answer
+
+```{r}
+score_table <- select(clinic_data, participant_id, baseline_score, followup_score)
+score_table
+```
+
+You should see 12 rows and three columns. The original `clinic_data` still contains its other columns.
+:::
+
+## 5. Filter: Choose Rows
+
+Which participants attended the North clinic?
+
+```{r}
+north_data <- filter(clinic_data, clinic == "North")
+north_data
+```
+
+`==` asks whether values are equal. `"North"` needs quotation marks because it is text. R distinguishes capitalization: `"north"` is different from `"North"`.
+
+| Symbol | Meaning |
+|---|---|
+| `==` | Equal to |
+| `!=` | Not equal to |
+| `>` or `<` | Greater than or less than |
+| `>=` or `<=` | Greater than or equal to; less than or equal to |
+| `&` | AND: both conditions must be true |
+| `\|` | OR: at least one condition must be true |
+
+We can combine conditions. This keeps participants from North **who also attended at least six visits**:
+
+```{r}
+north_six_visits <- filter(clinic_data, clinic == "North" & visits >= 6)
+north_six_visits
+```
+
+### Your turn: Who completed the program?
+
+Create `completed_data` containing only participants with `completed == "Yes"`. How many rows remain?
+
+```{r}
+# Write your code here.
+```
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Hint
+
+Use `filter()` to create the new dataset, then `nrow()` to count its rows. The text value is exactly `"Yes"`.
+:::
+
+::: {.callout-note collapse="true"}
+## Show the answer
+
+```{r}
+completed_data <- filter(clinic_data, completed == "Yes")
+nrow(completed_data)
+```
+
+There should be **9 participants**. Filtering changes which rows appear in the saved result; it does not delete rows from `clinic_data`.
+:::
+
+### Your turn: Combine two conditions
+
+Find participants from the South clinic who are **65 years old or older**. Save them as `south_older`.
+
+```{r}
+# Write your code here.
+```
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Hint
+
+Use `&` between `clinic == "South"` and `age >= 65`.
+:::
+
+::: {.callout-note collapse="true"}
+## Show the answer
+
+```{r}
+south_older <- filter(clinic_data, clinic == "South" & age >= 65)
+south_older
+```
+
+You should see **P009 and P012**. The `>=` includes participants who are exactly 65.
+:::
+
+## 6. Arrange: Put Rows in Order
+
+Let's sort participants by age, youngest first.
+
+```{r}
+age_order <- arrange(clinic_data, age)
+age_order
+```
+
+`arrange()` sorts from smallest to largest by default. Use `desc()` for largest to smallest:
+
+```{r}
+age_order_desc <- arrange(clinic_data, desc(age))
+age_order_desc
+```
+
+Sorting moves whole rows together. Each participant keeps their own age, scores, and visits.
+
+### Your turn: Most visits first
+
+Create `visits_order` with the participants who attended the most visits at the top.
+
+```{r}
+# Write your code here.
+```
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Hint
+
+Use `arrange(clinic_data, desc(...))`. Which column goes inside `desc()`?
+:::
+
+::: {.callout-note collapse="true"}
+## Show the answer
+
+```{r}
+visits_order <- arrange(clinic_data, desc(visits))
+visits_order
+```
+
+**P004** should appear first, with 10 visits.
+:::
+
+## 7. Mutate: Create a New Column
+
+How much did each participant's function score change?
+
+```{r}
+clinic_working <- mutate(
+  clinic_data,
+  score_change = followup_score - baseline_score
+)
+
+select(clinic_working, participant_id, baseline_score, followup_score, score_change)
+```
+
+`mutate()` keeps the existing columns and adds `score_change`. We saved this as `clinic_working`, so our original dataset remains available.
+
+In Week 3, you calculated a change score using a loop. Here, R subtracts the columns across all rows at once.
+
+**Pause:** P001 changed from 40 to 55. What should their change score be? What would a negative change mean?
+
+### Your turn: Add a practice category
+
+In `clinic_working`, add a column called `change_category`. Use `"10 or more"` when `score_change >= 10` and `"Below 10"` otherwise. Save the updated result back to `clinic_working`.
+
+```{r}
+# Write your code here.
+```
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Hint
+
+Combine `mutate()` with the `ifelse()` you reviewed earlier:
+
+```r
+clinic_working <- mutate(
+  clinic_working,
+  change_category = ifelse(condition, "label when TRUE", "label when FALSE")
+)
+```
+
+Inside `mutate()`, use column names directly; you do not need `clinic_working$` before them.
+:::
+
+::: {.callout-note collapse="true"}
+## Show the answer
+
+```{r}
+clinic_working <- mutate(
+  clinic_working,
+  change_category = ifelse(score_change >= 10, "10 or more", "Below 10")
+)
+
+select(clinic_working, participant_id, score_change, change_category)
+```
+
+Six participants have a change of at least 10. This threshold is only for practicing conditionals; it has no established clinical meaning in these invented data.
+:::
+
+## 8. Summarise: Make a Small Summary
+
+What is the average change across all participants?
+
+```{r}
+overall_summary <- summarise(
+  clinic_working,
+  participants = n(),
+  average_change = mean(score_change)
+)
+
+overall_summary
+```
+
+Here, `n()` counts rows and `mean()` calculates an average. `participants` and `average_change` are names we chose for the output columns.
+
+Unlike `mutate()`, which keeps participant-level rows, this `summarise()` produces **one row describing the whole dataset**.
+
+### Your turn: Summarise visits
+
+Create `visit_summary` with the number of participants and their average number of visits.
+
+```{r}
+# Write your code here.
+```
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Hint
+
+Use `summarise(clinic_working, participants = n(), average_visits = mean(...))`.
+:::
+
+::: {.callout-note collapse="true"}
+## Show the answer
+
+```{r}
+visit_summary <- summarise(
+  clinic_working,
+  participants = n(),
+  average_visits = mean(visits)
+)
+
+visit_summary
+```
+
+You should see **12 participants** and **6.25 visits** on average.
+:::
+
+### A summary for each clinic
+
+`group_by()` tells R to perform the next summary separately for each group.
+
+```{r}
+clinic_groups <- group_by(clinic_working, clinic)
+
+clinic_summary <- summarise(
+  clinic_groups,
+  participants = n(),
+  average_change = mean(score_change),
+  .groups = "drop"
+)
+
+clinic_summary
+```
+
+You should get one row for North and one for South, with six participants in each. `.groups = "drop"` leaves the result as an ordinary, ungrouped summary table.
+
+**Think about the result:** Are the averages different? Does a difference in these fictional descriptive summaries establish that one clinic is better? Why might that conclusion require more information?
+
+## 9. Connect Steps With a Pipe
+
+So far, we have saved individual steps as objects. A **pipe**, `|>`, passes the result of one step into the first input of the next function. Read it as **“then.”**
+
+```{r}
+completed_scores <- clinic_working |>
+  filter(completed == "Yes") |>
+  select(participant_id, clinic, score_change) |>
+  arrange(desc(score_change))
+
+completed_scores
+```
+
+Read this from top to bottom:
+
+1. Start with `clinic_working`.
+2. Then keep participants who completed the program.
+3. Then keep three columns.
+4. Then sort from largest change to smallest.
+5. Save the result as `completed_scores`.
+
+The dataset no longer needs to be written inside each function because the pipe supplies it.
+
+::: {.callout-note}
+## Which pipe is this?
+
+`|>` is the built-in R pipe and requires R 4.1 or later. You may also see `%>%` in other tutorials. We are using only `|>` today. If your R version is older, use separate steps like those in Sections 4–8, or update R before using these pipe examples.
+:::
+
+## 10. Your Turn: A Mini Analysis
+
+The program asks: **Among participants who completed the program, what was the average change at each clinic?**
+
+Use `clinic_working` and complete these steps:
+
+1. Keep participants who completed the program.
+2. Group the remaining participants by clinic.
+3. Count participants and calculate average change in each clinic.
+4. Save the result as `completed_summary` and print it.
+
+You can use a pipe or separate objects. Both approaches are fine.
+
+```{r}
+# Write your code here.
+```
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Hint 1 — Choose your tools
+
+You need `filter()`, `group_by()`, and `summarise()`, in that order. Your filter condition is `completed == "Yes"`.
+:::
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Hint 2 — Start with a pattern
+
+Copy this pattern into RStudio and replace the placeholders before running it:
+
+```r
+completed_summary <- clinic_working |>
+  filter(____) |>
+  group_by(____) |>
+  summarise(
+    participants = n(),
+    average_change = mean(____),
+    .groups = "drop"
+  )
+```
+:::
+
+::: {.callout-note collapse="true"}
+## Show the answer
+
+```{r}
+completed_summary <- clinic_working |>
+  filter(completed == "Yes") |>
+  group_by(clinic) |>
+  summarise(
+    participants = n(),
+    average_change = mean(score_change),
+    .groups = "drop"
+  )
+
+completed_summary
+```
+
+You should see:
+
+| Clinic | Participants | Average change |
+|---|---:|---:|
+| North | 4 | 12.75 |
+| South | 5 | 11.00 |
+
+If your counts differ, check whether you filtered before summarizing. These summaries describe only program completers; they do not represent every participant.
+:::
+
+### Explain your result
+
+In your own words:
+
+- Which participants did you include?
+- What does each row in your summary represent?
+- Which dataset contains everyone: `clinic_data` or `completed_summary`?
+- How would your answer change if you included people who did not complete the program?
+
+## 11. Optional: What Happens When a Value Is Missing?
+
+Real datasets often have missing values, represented by `NA` in R. We will create a separate practice copy with one missing follow-up score.
+
+```{r}
+missing_data <- clinic_working
+missing_data$followup_score[3] <- NA
+
+missing_data <- mutate(
+  missing_data,
+  score_change = followup_score - baseline_score
+)
+
+mean(missing_data$score_change)
+```
+
+The mean returns `NA`: one participant's change cannot be calculated.
+
+If we decide to summarize the available values, we can use `na.rm = TRUE`:
+
+```{r}
+mean(missing_data$score_change, na.rm = TRUE)
+```
+
+This omits missing values **from this calculation**. It does not fill them in or delete participants from the dataset.
+
+### Your turn: Count available change scores
+
+Create a summary reporting the total number of participants, the number with an available change score, and the average of those available scores.
+
+```{r}
+# Write your code here.
+```
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Hint
+
+`is.na(score_change)` identifies missing values. `!is.na(score_change)` identifies values that are not missing. `sum()` counts the TRUE values, and `n()` counts all rows.
+:::
+
+::: {.callout-note collapse="true"}
+## Show the answer
+
+```{r}
+missing_summary <- summarise(
+  missing_data,
+  participants = n(),
+  available_scores = sum(!is.na(score_change)),
+  average_change = mean(score_change, na.rm = TRUE)
+)
+
+missing_summary
+```
+
+There are **12 participants**, but only **11 available change scores**. Report how many values contributed to a summary. In a real analysis, investigate why values are missing before deciding how to handle them.
+:::
+
+## 12. Save Your Work
+
+Save your script or Quarto document. That code is the recipe for recreating your results.
+
+You can also export a table as a CSV. Run this in your own session when you are ready:
+
+```{r}
+#| eval: false
+write.csv(completed_summary, "completed_clinic_summary.csv", row.names = FALSE)
+```
+
+`row.names = FALSE` prevents an extra row-number column in the exported file. The file is saved in your current working directory; `getwd()` shows that location.
+
+If you want a CSV copy of the original practice dataset for a later session:
+
+```{r}
+#| eval: false
+write.csv(
+  select(clinic_data, participant_id, age, clinic, visits,
+         baseline_score, followup_score, completed),
+  "week4_clinic_data.csv",
+  row.names = FALSE
+)
+```
+
+That explicitly selects the seven original columns, leaving out the practice column we added in the refresher.
+
+::: {.callout-tip collapse="true"}
+## If you're stuck: Common fixes
+
+- **“Could not find function”**: Run `library(dplyr)` for the data manipulation functions.
+- **“Object not found”**: Check spelling and run the earlier code that creates the object. Use `names(clinic_data)` to check column names.
+- **No rows after filtering**: Check text spelling, capitalization, quotation marks, and your condition.
+- **The Console shows `+` instead of `>`**: R is waiting for an unfinished parenthesis, quote, or brace. Press Escape, then run the complete corrected block.
+- **Your new column is missing**: Save the result with `<-`. Printing a transformed table alone does not update the saved object.
+- **Pipe error**: Check your R version with `R.version.string`. You can use the separate-step examples if `|>` is unavailable.
+
+If results look unexpected, pause and inspect the intermediate table before adding another step.
+:::
+
+## Wrap-Up
+
+Today, we used familiar conditions to choose participants, then built new variables and summaries.
+
+Can you explain:
+
+- How `select()` and `filter()` differ?
+- Why `==` appears in a filter condition?
+- What `desc()` changes?
+- How `mutate()` and `summarise()` differ?
+- What `group_by()` adds to a summary?
+- What the pipe `|>` does?
+- Why saving your code matters even after you export a CSV?
+
+**Exit task:** Choose one question about the practice data, write the code to answer it, and describe the result in one sentence. You can reuse and adapt any example from today.
